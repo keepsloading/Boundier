@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.scripting.executeScript(
       {
         target: { tabId: tab.id },
-        files: ['content.js']
+        files: ['Readability.js', 'extractor.js', 'content.js']
       },
       () => {
         if (chrome.runtime.lastError) {
@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (!response || response.error) {
+        console.warn('Boundier analysis error detail:', response?.debug || response);
         callback(new Error(friendlyTabError(response?.error || 'Analysis failed.')));
         return;
       }
