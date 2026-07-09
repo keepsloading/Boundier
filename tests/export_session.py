@@ -16,14 +16,13 @@ async def export():
     seen = set()
     paths_to_try = [p for p in paths_to_try if not (p in seen or seen.add(p))]
     
-    cookies = []
-    active_path = ""
+    profile_results = {}
     
     async with async_playwright() as p:
         for path in paths_to_try:
             if not os.path.exists(path):
                 continue
-            print(f"Checking browser profile: {path}")
+            print(f"\nChecking browser profile: {path}")
             try:
                 context = await p.chromium.launch_persistent_context(
                     user_data_dir=path,
@@ -31,39 +30,40 @@ async def export():
                 )
                 page = await context.new_page()
                 try:
-                    # Navigate to chatgpt.com to force Chromium to decrypt and load cookies for the domain
                     await page.goto("https://chatgpt.com", wait_until="domcontentloaded", timeout=15000)
                 except Exception as goto_err:
-                    # Even if navigation times out or hits cloudflare, we try to grab whatever was loaded
-                    print(f"Navigation note: {goto_err}")
+                    print(f"  Navigation note: {goto_err}")
                 
                 found_cookies = await context.cookies()
                 await context.close()
                 
-                # Check if we found cookies for chatgpt
-                has_chatgpt = any("chatgpt" in c.get("domain", "") for c in found_cookies)
-                if found_cookies and (has_chatgpt or not cookies):
-                    cookies = found_cookies
-                    active_path = path
-                    if has_chatgpt:
-                        break
+                if found_cookies:
+                    # Look for actual session token in cookies
+                    has_session = any("session-token" in c.get("name", "") for c in found_cookies)
+                    profile_results[path] = {
+                        "cookies": found_cookies,
+                        "has_session": has_session
+                    }
+                    print(f"  Found {len(found_cookies)} cookies. Has session token: {has_session}")
             except Exception as e:
-                print(f"Error checking profile {path}: {e}")
+                print(f"  Error checking profile {path}: {e}")
         
-    if not cookies:
+    if not profile_results:
         print("No active login cookies found. Please run the bot locally first and ensure you are logged into ChatGPT!")
         return
         
-    print(f"Found active session cookies in: {active_path}")
-    
-    # Format as JSON string
-    session_json = json.dumps(cookies)
-    print("\n" + "="*80)
-    print("SUCCESS: Session cookies exported!")
-    print("Copy the entire line below and set it as the CHATGPT_STORAGE_STATE environment variable in Render:")
-    print("="*80)
-    print(session_json)
-    print("="*80 + "\n")
+    # Print output for each found profile
+    for path, result in profile_results.items():
+        session_json = json.dumps(result["cookies"])
+        print("\n" + "="*80)
+        print(f"PROFILE: {path}")
+        print(f"Total Cookies: {len(result['cookies'])} | Has Session Token: {result['has_session']}")
+        if result['has_session']:
+            print("⭐ (RECOMMENDED: This profile contains active login session tokens!)")
+        print("Copy the entire line below and set it as the CHATGPT_STORAGE_STATE environment variable in Render:")
+        print("="*80)
+        print(session_json)
+        print("="*80 + "\n")
 
 if __name__ == "__main__":
     asyncio.run(export())
