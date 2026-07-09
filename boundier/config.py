@@ -51,5 +51,11 @@ def load_config(config_path: str = "config.yaml") -> BoundierConfig:
         if "discord" not in raw_config:
             raw_config["discord"] = {}
         raw_config["discord"]["token"] = os.environ["DISCORD_TOKEN"]
+        
+    # Override headless mode if set in environment
+    if "PLAYWRIGHT_HEADLESS" in os.environ:
+        if "playwright" not in raw_config:
+            raw_config["playwright"] = {}
+        raw_config["playwright"]["headless"] = os.environ["PLAYWRIGHT_HEADLESS"].lower() in ("true", "1", "yes")
     
     return BoundierConfig.model_validate(raw_config)
