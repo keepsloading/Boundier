@@ -39,7 +39,12 @@ def get_master_key(user_data_path: str) -> bytes:
 def decrypt_cookie(val: bytes, key: bytes) -> str:
     if val.startswith(b'v10') or val.startswith(b'v11'):
         try:
-            return AESGCM(key).decrypt(val[3:15], val[15:], None).decode('utf-8')
+            decrypted = AESGCM(key).decrypt(val[3:15], val[15:], None)
+            try:
+                return decrypted.decode('utf-8')
+            except UnicodeDecodeError:
+                if len(decrypted) > 32:
+                    return decrypted[32:].decode('utf-8')
         except Exception:
             return None
     if not val.startswith(b'v10') and not val.startswith(b'v11') and not val.startswith(b'v20'):
