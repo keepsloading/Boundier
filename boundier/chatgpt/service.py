@@ -201,7 +201,7 @@ class ChatGPTService:
                     if asyncio.get_event_loop().time() - start_time > timeout:
                         logger.warning("Timeout waiting for edit streaming to start. Continuing...")
                         break
-                    await asyncio.sleep(0.2)
+                    await asyncio.sleep(0.05)
             else:
                 while True:
                     current_count = await self.page.locator('div[data-message-author-role="assistant"]').count()
@@ -209,7 +209,7 @@ class ChatGPTService:
                         break
                     if asyncio.get_event_loop().time() - start_time > timeout:
                         raise TimeoutError("Timeout waiting for ChatGPT response generation to start.")
-                    await asyncio.sleep(0.2)
+                    await asyncio.sleep(0.05)
         except Exception as e:
             logger.error(f"Error waiting for response bubble (is_edit={is_edit}): {e}", exc_info=True)
             await self.save_diagnostics_screenshot("bubble_wait_error")
@@ -223,7 +223,7 @@ class ChatGPTService:
         logger.info("Scraping ChatGPT response stream...")
         last_text = ""
         unchanged_polls = 0
-        max_unchanged_polls = 35
+        max_unchanged_polls = 60
         
         while True:
             try:
@@ -347,7 +347,7 @@ class ChatGPTService:
                      current_text = await response_locator.first.evaluate(js_script)
                      current_text = current_text.strip() if current_text else ""
                  else:
-                     current_text = "Thinking..."
+                     current_text = ""
             except Exception as e:
                  logger.error(f"Error reading response stream: {e}", exc_info=True)
                  await self.save_diagnostics_screenshot("stream_read_error")
@@ -366,11 +366,11 @@ class ChatGPTService:
                 if current_text != "":
                     break
                     
-            if unchanged_polls >= 50:
+            if unchanged_polls >= 140:
                 logger.warning("Generation stream stalled. Terminating reader.")
                 break
                 
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.05)
 
     async def get_sidebar_title_by_id(self, chat_id: str) -> Optional[str]:
         """Looks for the conversation in the sidebar by its ID and returns its title text."""
