@@ -195,21 +195,21 @@ class ChatGPTService:
             if is_edit:
                 # For edits, wait for streaming indicator to appear (indicating generation has started)
                 while True:
-                    is_generating = await self.page.locator(self.selectors.streaming_indicators).count() > 0
+                    is_generating = await self.page.evaluate(f"() => document.querySelector('{self.selectors.streaming_indicators}') !== null")
                     if is_generating:
                         break
                     if asyncio.get_event_loop().time() - start_time > timeout:
                         logger.warning("Timeout waiting for edit streaming to start. Continuing...")
                         break
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.2)
             else:
                 while True:
-                    current_count = await self.page.locator('div[data-message-author-role="assistant"]').count()
+                    current_count = await self.page.evaluate("() => document.querySelectorAll('div[data-message-author-role=\"assistant\"]').length")
                     if current_count > existing_count:
                         break
                     if asyncio.get_event_loop().time() - start_time > timeout:
                         raise TimeoutError("Timeout waiting for ChatGPT response generation to start.")
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.2)
         except Exception as e:
             logger.error(f"Error waiting for response bubble (is_edit={is_edit}): {e}", exc_info=True)
             await self.save_diagnostics_screenshot("bubble_wait_error")
