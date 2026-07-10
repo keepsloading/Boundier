@@ -721,7 +721,7 @@ class BoundierCog(commands.Cog):
             ):
                 buffer += chunk
                 now = asyncio.get_event_loop().time()
-                if now - last_update > 1.5:
+                if now - last_update > 0.8:
                     if len(buffer) < 4000:
                         embed.description = buffer + " ▌"
                         await reply_message.edit(embed=embed)
