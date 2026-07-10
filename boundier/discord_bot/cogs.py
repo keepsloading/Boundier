@@ -332,6 +332,8 @@ class BoundierCog(commands.Cog):
         author_name = message.author.display_name
             
         # Execute follow-up stream with files and history context
+        guild_name = message.channel.guild.name if message.channel.guild else "Direct Message"
+        logger.info(f"Message received. Server: '{guild_name}' | Channel: '{message.channel.name}' | User: '{author_name}'")
         asyncio.create_task(self._process_message_stream(
             message.channel,
             thread_record["channel_id"],
@@ -460,6 +462,8 @@ class BoundierCog(commands.Cog):
         ))
 
     @app_commands.command(name="ask", description="Submit a query directly to the current conversation or start a thread locally")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def ask(self, interaction: discord.Interaction, prompt: str, attachment: Optional[discord.Attachment] = None):
         """Executes prompt on existing thread directly, or creates thread locally inside current text channel."""
         # Clean prompt from potential Discord client reply slash-command UI glitches
@@ -544,6 +548,8 @@ class BoundierCog(commands.Cog):
                 history_context = None
             
         # Spawn direct channel streaming response
+        guild_name = current_channel.guild.name if current_channel.guild else "Direct Message"
+        logger.info(f"Slash command /ask received. Server: '{guild_name}' | Channel: '{current_channel.name}' | User: '{author_name}'")
         asyncio.create_task(self._process_message_stream(
             current_channel,
             current_channel.id,
@@ -562,6 +568,8 @@ class BoundierCog(commands.Cog):
         app_commands.Choice(name="New Channel", value="new_channel"),
         app_commands.Choice(name="New Thread in Existing Channel", value="new_thread")
     ])
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def new_chat(
         self,
         interaction: discord.Interaction,
@@ -587,6 +595,7 @@ class BoundierCog(commands.Cog):
             return
             
         author_name = interaction.user.display_name
+        logger.info(f"Slash command /new received. Server: '{guild.name}' | User: '{author_name}'")
             
         # Download attachment if present
         file_paths = []
@@ -827,7 +836,8 @@ class BoundierCog(commands.Cog):
                 await reply_message.edit(embed=embed)
                 
             elapsed = asyncio.get_event_loop().time() - start_time
-            logger.info(f"Follow-up response complete. Thread: '{thread.name}' (#{channel_name}). Time: {elapsed:.2f}s")
+            guild_name = thread.guild.name if thread.guild else "Direct Message"
+            logger.info(f"Response complete. Server: '{guild_name}' | Channel/Thread: '{thread.name}' (#{channel_name}) | Time: {elapsed:.2f}s")
             
             session = self.bot.manager._active_sessions.get(thread.id)
             if session and (thread.name.endswith("...") or session.conversation_title.lower() in ("new chat", "newchat", "new conversation")):
