@@ -218,30 +218,15 @@ class ConversationManager:
                 chat_id = self.service.extract_chat_id()
                 if chat_id:
                     break
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.05)
                 
             if not chat_id:
                 logger.warning("Failed to extract Chat ID from URL after 5 seconds.")
                 
-            # 2. Wait for ChatGPT to generate a custom sidebar title for this chat_id (up to 8 seconds)
-            title = None
-            if chat_id:
-                logger.info(f"Chat ID extracted: {chat_id}. Polling sidebar for custom generated title...")
-                start_title_wait = asyncio.get_event_loop().time()
-                while asyncio.get_event_loop().time() - start_title_wait < 8.0:
-                    title = await self.service.get_sidebar_title_by_id(chat_id)
-                    # Break if title has been generated and is not "new chat"
-                    if title and title.lower() not in ("new chat", "newchat", "new conversation"):
-                        break
-                    await asyncio.sleep(0.5)
-            
-            if not title:
-                # If still "New chat" or missing, fallback to generic title
-                title = await self.service.get_sidebar_title_by_id(chat_id) if chat_id else None
-                if not title or title.lower() in ("new chat", "newchat", "new conversation"):
-                    title = prompt[:25].strip() or "New Chat"
+            # Use prompt-derived title as temporary title immediately
+            title = prompt[:25].strip() or "New Chat"
                 
-            logger.info(f"Scraped title: '{title}', chat_id: '{chat_id}'")
+            logger.info(f"Using temporary title: '{title}', chat_id: '{chat_id}'")
             
             self._active_generators[temp_id] = (queue, producer_task, session, chat_id)
             return chat_id, title

@@ -694,6 +694,20 @@ class BoundierCog(commands.Cog):
         reply_message = None
         typing_manager = thread.typing()
         has_typing = False
+        
+        # Start a background task to keep typing continuously until streaming ends
+        async def keep_typing_alive():
+            try:
+                while True:
+                    await thread.trigger_typing()
+                    await asyncio.sleep(5.0)
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                logger.warning(f"Error in continuous typing task: {e}")
+
+        typing_task = asyncio.create_task(keep_typing_alive())
+        
         try:
             try:
                 await typing_manager.__aenter__()
@@ -726,8 +740,9 @@ class BoundierCog(commands.Cog):
                 buffer += chunk
                 now = asyncio.get_event_loop().time()
                 if now - last_update > 0.8:
+                    cursor = " ▌" if int(now * 2) % 2 == 0 else ""
                     if len(buffer) < 4000:
-                        embed.description = buffer + " ▌"
+                        embed.description = buffer + cursor
                         await reply_message.edit(embed=embed)
                     else:
                         embed.description = buffer[:4000]
@@ -789,6 +804,8 @@ class BoundierCog(commands.Cog):
                 except Exception as send_err:
                     logger.warning(f"Failed to send error response: {send_err}")
         finally:
+            if 'typing_task' in locals() and typing_task:
+                typing_task.cancel()
             if has_typing:
                 try:
                     await typing_manager.__aexit__(None, None, None)
