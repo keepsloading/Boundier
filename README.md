@@ -33,6 +33,7 @@
 * ⚡ **Resource & IPC Optimization:** Custom JS evaluations (`page.evaluate`) and throttled poll loops keep CPU/IPC footprints minimal and eliminate event-loop lag. Operates stably on Render's **512 MB RAM** free tier.
 * 📸 **Web-based Troubleshooting / Diagnostics:** Exposes a secure web endpoint serving browser diagnostics screenshots (`/diagnostics/session_unverified.png` or `bubble_wait_error.png`) on port 10000.
 * 🎛️ **Interactive UI Elements:** Responses are rendered inside **clean white Discord embeds** with interactive buttons to view the original prompt, copy text, or retry generations.
+* 🧠 **Native ChatGPT Memory & Profiles:** Leverages ChatGPT's native custom instructions, user personalization profiles, and persistent memory from past chats out-of-the-box instead of having to implement, host, and maintain a custom vector database, embeddings pipeline, or external message history storage.
 
 ---
 
@@ -52,6 +53,14 @@ graph TD
     E -->|Stream Message| B
     B -->|Update Embed| A
 ```
+
+---
+
+## 🎬 Demo
+
+Here is a preview of Boundier in action, showcasing its interactive white embeds and dynamic conversation threading:
+
+![GTA-SA](GTA-SA.png)
 
 * **`PlaywrightDriver` ([driver.py](file:///app/boundier/chatgpt/driver.py)):** Manages persistent Chromium contexts, injects decrypted session cookies, and handles Cloudflare Turnstile hydration checks.
 * **`ChatGPTService` ([service.py](file:///app/boundier/chatgpt/service.py)):** Performs page actions such as submitting prompts and files via JavaScript, polling generation streams, and capturing diagnostic screenshots.
