@@ -1,4 +1,4 @@
-# Boundier 🤖
+# Boundier 🤖 <img src="Boundier.png" align="right" width="48" height="48">
 
 [![Render Deployment](https://img.shields.io/badge/Deploy-Render-00c2cb?style=for-the-badge&logo=render&logoColor=white)](https://render.com)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
@@ -6,7 +6,7 @@
 
 **Boundier** is an autonomous browser-based Discord AI companion that operates directly through ChatGPT's web interface using headless browser automation. The name signifies **"Breaking Boundaries"**, representing the ability of the bot to break out of the standard ChatGPT web interface constraints and pipe intelligent conversations directly into your Discord community workspace.
 
-, -
+---
 
 > [!WARNING]
 > **DISCLAIMER: FOR LEARNING & EXPERIMENTAL PURPOSES ONLY**
