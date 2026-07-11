@@ -8,7 +8,7 @@
 [![No API Cost](https://img.shields.io/badge/API%20Cost-%240-brightgreen?style=for-the-badge)](https://github.com/keepsloading/Boundier)
 [![ChatGPT](https://img.shields.io/badge/Powered%20by-ChatGPT%20Web-74aa9c?style=for-the-badge&logo=openai&logoColor=white)](https://chatgpt.com)
 
-> **Tired of paying per token? Boundier brings the full ChatGPT experience — including GPT-4o, web search, memory, and file uploads — directly into your Discord server, completely free.**
+> **Tired of paying per token? Boundier brings the full ChatGPT experience — including GPT, web search, memory, and file uploads — directly into your Discord server, completely free.**
 
 **Boundier** is an **autonomous browser-based** Discord AI companion that drives **ChatGPT's real web interface** via headless Playwright automation. Instead of routing through the expensive OpenAI API, it authenticates as *you* in a cloud Chromium session and pipes live ChatGPT conversations straight into Discord threads — at **$0 per message**.
 
