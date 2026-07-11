@@ -508,15 +508,14 @@ class ChatGPTService:
             logger.info(f"Asset detection: found {len(detected)} downloadable asset(s) in last response bubble.")
             os.makedirs("scratch/attachments", exist_ok=True)
 
-            # Step 2: For each detected download target, trigger Download and intercept via Playwright
+            # Step 2: Locate download buttons inside the last assistant message bubble natively
             dl_selector = self.selectors.image_download_button
-            dl_buttons = self.page.locator(
-                'div[data-message-author-role="assistant"]:last-of-type ' + dl_selector
-            )
+            last_assistant = self.page.locator('div[data-message-author-role="assistant"]').last
+            dl_buttons = last_assistant.locator(dl_selector)
 
-            # Fall back to a broader search within the full page if the scoped one finds nothing
             count = await dl_buttons.count()
             if count == 0:
+                # Fall back to a broader search within the full page if the scoped one finds nothing
                 dl_buttons = self.page.locator(dl_selector)
                 count = await dl_buttons.count()
 
