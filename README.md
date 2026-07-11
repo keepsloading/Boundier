@@ -1,4 +1,4 @@
-﻿# Boundier ðŸ¤– <img src="Boundier.png" align="right" width="48" height="48">
+# Boundier ðŸ¤– <img src="Boundier.png" align="right" width="48" height="48">
 
 ### ðŸ’¬ Full ChatGPT on Discord â€” **No API key. No token costs. Zero.** ðŸš€
 
