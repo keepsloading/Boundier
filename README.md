@@ -1,10 +1,18 @@
 # Boundier 🤖 <img src="Boundier.png" align="right" width="48" height="48">
 
+### 💬 Full ChatGPT on Discord — **No API key. No token costs. Zero.** 🚀
+
 [![Render Deployment](https://img.shields.io/badge/Deploy-Render-00c2cb?style=for-the-badge&logo=render&logoColor=white)](https://render.com)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Playwright](https://img.shields.io/badge/Playwright-Automation-orange?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev)
+[![No API Cost](https://img.shields.io/badge/API%20Cost-%240-brightgreen?style=for-the-badge)](https://github.com/keepsloading/Boundier)
+[![ChatGPT](https://img.shields.io/badge/Powered%20by-ChatGPT%20Web-74aa9c?style=for-the-badge&logo=openai&logoColor=white)](https://chatgpt.com)
 
-**Boundier** is an **autonomous browser-based** Discord AI companion that operates directly through **ChatGPT's web interface** using **headless browser automation**. The name signifies **"Breaking Boundaries"**, representing the ability of the bot to break out of the standard ChatGPT web interface constraints and pipe intelligent conversations directly into your Discord community workspace.
+> **Tired of paying per token? Boundier brings the full ChatGPT experience — including GPT-4o, web search, memory, and file uploads — directly into your Discord server, completely free.**
+
+**Boundier** is an **autonomous browser-based** Discord AI companion that drives **ChatGPT's real web interface** via headless Playwright automation. Instead of routing through the expensive OpenAI API, it authenticates as *you* in a cloud Chromium session and pipes live ChatGPT conversations straight into Discord threads — at **$0 per message**.
+
+The name signifies **"Breaking Boundaries"** — breaking free from API paywalls, rate limits, and token costs that make running an AI community bot prohibitively expensive.
 
 ---
 
@@ -26,14 +34,15 @@
 
 ## 🌟 Key Features
 
-* 👤 **Direct ChatGPT Integration:** Avoids expensive API token fees by driving a **real headless Chromium browser** authenticated under your personal ChatGPT account.
-* 🔄 **Private Gist Session Syncing:** Encrypts and syncs browser cookies/storage states seamlessly to a private GitHub Gist, allowing the cloud host to boot up authenticated and auto-renew tokens back to the Gist during runtime.
-* 🔒 **Dynamic User Restriction:** Restricts bot access to a maximum of **5 registered users** per bot instance. The first 5 distinct users who send commands are whitelisted dynamically, protecting browser contexts and rate limits from abuse.
-* 🧵 **Dynamic Thread Routing:** Automatically creates and organizes conversations inside **Discord text threads**, matching titles to ChatGPT's auto-generated sidebar topics.
-* ⚡ **Resource & IPC Optimization:** Custom JS evaluations (`page.evaluate`) and throttled poll loops keep CPU/IPC footprints minimal and eliminate event-loop lag. Operates stably on Render's **512 MB RAM** free tier.
-* 📸 **Web-based Troubleshooting / Diagnostics:** Exposes a secure web endpoint serving browser diagnostics screenshots (`/diagnostics/session_unverified.png` or `bubble_wait_error.png`) on port 10000.
-* 🎛️ **Interactive UI Elements:** Responses are rendered inside **clean white Discord embeds** with interactive buttons to view the original prompt, copy text, or retry generations.
-* 🧠 **Native ChatGPT Memory & Profiles:** Leverages ChatGPT's native custom instructions, user personalization profiles, and persistent memory from past chats out-of-the-box instead of having to implement, host, and maintain a custom vector database, embeddings pipeline, or external message history storage.
+* 🆓 **Zero API Cost:** Runs through your **personal ChatGPT account** in a headless Chromium browser — no OpenAI API key, no per-message billing, no rate-limit tiers. Every message costs the same: **nothing**.
+* 🧠 **Full ChatGPT Feature Set:** Because it drives the real web UI, you get **GPT-4o, web search, file analysis, DALL·E image generation, memory, and custom instructions** — the complete ChatGPT Plus experience, not a stripped-down API subset.
+* 💾 **Native Memory & Personalization:** Inherits ChatGPT's built-in persistent memory and user profiles from your real account. No vector database, no embeddings pipeline — ChatGPT already remembers your users' preferences across sessions for free.
+* 🔄 **Private Gist Session Syncing:** Encrypts and syncs browser cookies/storage states to a private GitHub Gist, so the cloud host boots up pre-authenticated and automatically refreshes the session on every request.
+* 🔒 **Dynamic User Restriction:** Limits bot access to a maximum of **5 registered users** per instance. The first 5 Discord users to send a command are whitelisted, protecting the shared browser session from abuse.
+* 🧵 **Smart Thread Routing:** Every conversation lives in its own **Discord thread**, automatically titled to match ChatGPT's auto-generated sidebar topic — keeping your server channels organized.
+* 🎛️ **Interactive Discord UI:** Responses render in **clean embeds** with action buttons to copy text, view the original prompt, retry a generation, or browse web-search citation links.
+* ⚡ **Lightweight Cloud Hosting:** Custom JS scraping and throttled poll loops keep memory usage low enough to run on Render's **512 MB free tier**.
+* 📸 **Live Diagnostics Endpoint:** A secure web endpoint (`/diagnostics/...`) exposes browser screenshots for real-time health monitoring without SSH access.
 
 ---
 
