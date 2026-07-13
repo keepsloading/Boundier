@@ -25,14 +25,7 @@ class PlaywrightDriver:
         logger.info("Starting Playwright driver for ChatGPT...")
         self.playwright = await async_playwright().start()
         
-        import shutil
         user_data_dir = os.path.abspath(self.config.playwright.user_data_dir)
-        if os.path.exists(user_data_dir):
-            try:
-                shutil.rmtree(user_data_dir)
-                logger.info(f"Purged old Chromium profile directory to save memory: {user_data_dir}")
-            except Exception as e:
-                logger.warning(f"Failed to purge Chromium profile directory: {e}")
         os.makedirs(user_data_dir, exist_ok=True)
         
         viewport_dims = {
@@ -73,12 +66,6 @@ class PlaywrightDriver:
                 "--disable-accelerated-2d-canvas",
                 "--disable-webgl",
                 "--disable-audio-output",
-                "--disk-cache-size=1",
-                "--media-cache-size=1",
-                "--disable-application-cache",
-                "--disable-databases",
-                "--disable-gpu-program-cache",
-                "--disable-gpu-shader-disk-cache",
                 "--renderer-process-limit=1",
                 "--disable-site-isolation-trials",
                 "--disable-features=Translate,OptimizationHints,BackForwardCache,MediaRouter",
@@ -221,14 +208,18 @@ class PlaywrightDriver:
 
     async def solve_turnstile_if_present(self, page: Page) -> bool:
         """Detects and clicks Cloudflare Turnstile checkbox if present on the page."""
+        if getattr(page, "_turnstile_solved_count", 0) >= 3:
+            return False
+            
         try:
             for frame in page.frames:
                 if "cloudflare" in frame.url or "challenges" in frame.url:
                     logger.info("Cloudflare Turnstile challenge detected in iframe! Attempting auto-solve...")
-                    checkbox = frame.locator('#challenge-stage, .cb-i, input[type="checkbox"]').first
+                    checkbox = frame.locator('input[type="checkbox"], .cb-i, span.mark, label').first
                     if await checkbox.count() > 0 and await checkbox.is_visible():
                         await checkbox.click(force=True)
-                        logger.info("[SUCCESS] Clicked Cloudflare Turnstile checkbox!")
+                        page._turnstile_solved_count = getattr(page, "_turnstile_solved_count", 0) + 1
+                        logger.info(f"[SUCCESS] Clicked Cloudflare Turnstile checkbox! ({page._turnstile_solved_count}/3)")
                         return True
             return False
         except Exception as e:
