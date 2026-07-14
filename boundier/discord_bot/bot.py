@@ -41,3 +41,40 @@ class BoundierBot(commands.Bot):
         activity = discord.Activity(type=discord.ActivityType.watching, name="Breaking Boundaries")
         await self.change_presence(activity=activity)
         logger.info("Activity status set to: Watching 'Breaking Boundaries'")
+        
+        try:
+            await self.cleanup_stuck_responses()
+        except Exception as e:
+            logger.warning(f"Error during startup response cleanup: {e}", exc_info=True)
+
+    async def cleanup_stuck_responses(self):
+        """Scans active threads for any responses left stuck as a cursor from a prior crash or restart."""
+        logger.info("Scanning database active threads for stuck cursor responses...")
+        active_threads = self.store.list_active_threads()
+        cleaned_count = 0
+        
+        for thread_data in active_threads:
+            thread_id = thread_data.get("thread_id")
+            if not thread_id:
+                continue
+                
+            try:
+                channel = self.get_channel(thread_id)
+                if not channel:
+                    channel = await self.fetch_channel(thread_id)
+                    
+                async for message in channel.history(limit=5):
+                    if message.author.id == self.user.id:
+                        if message.embeds:
+                            embed = message.embeds[0]
+                            desc = embed.description or ""
+                            if desc == "▌" or desc.endswith(" ▌"):
+                                logger.info(f"Editing stuck response in thread {thread_id}, message {message.id}...")
+                                embed.description = "⚠️ *Generation interrupted due to bot restart. Please ask your question again.*"
+                                embed.color = 0xff0000  # Red color for error/alert
+                                await message.edit(embed=embed, view=None)
+                                cleaned_count += 1
+            except Exception as thread_err:
+                logger.warning(f"Failed to scan/cleanup thread {thread_id}: {thread_err}")
+                
+        logger.info(f"Startup scan completed. Cleaned up {cleaned_count} stuck messages.")
