@@ -282,8 +282,8 @@ class PlaywrightDriver:
                     chat_input = self.page.locator(self.selectors.chat_input).first
                     login_btn = self.page.locator('[data-testid="login-button"]').first
                     
-                    has_input = await chat_input.count() > 0 and await chat_input.is_visible()
-                    has_login = await login_btn.count() > 0 and await login_btn.is_visible()
+                    has_input = await chat_input.count() > 0
+                    has_login = await login_btn.count() > 0
                     
                     if has_input or has_login:
                         break
