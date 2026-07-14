@@ -271,7 +271,6 @@ class ChatGPTService:
             timeout = 90.0
             start_time = asyncio.get_event_loop().time()
             if is_edit:
-                # For edits, wait for streaming indicator to appear (indicating generation has started)
                 while True:
                     is_generating = await self.page.evaluate(f"() => document.querySelector('{self.selectors.streaming_indicators}') !== null")
                     if is_generating:
@@ -279,7 +278,7 @@ class ChatGPTService:
                     if asyncio.get_event_loop().time() - start_time > timeout:
                         logger.warning("Timeout waiting for edit streaming to start. Continuing...")
                         break
-                    await asyncio.sleep(0.2)
+                    await asyncio.sleep(0.5)
             else:
                 try:
                     while True:
@@ -295,7 +294,7 @@ class ChatGPTService:
                             break
                         if asyncio.get_event_loop().time() - start_time > timeout:
                             raise TimeoutError("Timeout waiting for ChatGPT response generation to start.")
-                        await asyncio.sleep(0.2)
+                        await asyncio.sleep(0.5)
                 finally:
                     try:
                         await last_assistant_handle.dispose()
@@ -483,17 +482,17 @@ class ChatGPTService:
                 else:
                     unchanged_polls += 1
                 
-            # If ChatGPT has finished generating (send button is active), settle within 5 ticks (0.25s)
-            if not is_generating and unchanged_polls >= 5:
+            # If ChatGPT has finished generating (send button is active), settle within 2 ticks (1.0s)
+            if not is_generating and unchanged_polls >= 2:
                 if current_text != "":
                     break
                     
-            if unchanged_polls >= 140:
+            if unchanged_polls >= 40:
                 logger.warning("Generation stream stalled. Terminating reader.")
                 await self.save_diagnostics_screenshot("stream_stalled")
                 break
                 
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.5)
 
     async def extract_generated_assets(self) -> list[dict]:
         """
