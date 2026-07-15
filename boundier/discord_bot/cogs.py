@@ -1079,8 +1079,15 @@ class BoundierCog(commands.Cog):
         if is_in_thread:
             # Already inside a thread — summarise right here, no new thread needed
             thread_record = self.bot.store.get_thread(current_channel.id)
-            parent_id = thread_record[1] if thread_record else current_channel.parent_id or current_channel.id
-            parent_name = (self.bot.store.get_channel(parent_id) or [None, current_channel.name])[1]
+            parent_id = thread_record.get("channel_id") if thread_record else (getattr(current_channel, 'parent_id', current_channel.id) or current_channel.id)
+            
+            channel_record = self.bot.store.get_channel(parent_id)
+            if channel_record:
+                parent_name = channel_record.get("channel_name")
+            else:
+                parent_name = getattr(current_channel, 'parent', None)
+                parent_name = parent_name.name if parent_name else f"channel-{parent_id}"
+
             asyncio.create_task(self._process_message_stream(
                 thread=current_channel,
                 channel_id=parent_id,
