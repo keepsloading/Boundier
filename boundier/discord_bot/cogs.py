@@ -1029,92 +1029,73 @@ class BoundierCog(commands.Cog):
             f"Instruction/Prompt: {prompt}"
         )
 
-        # 4. Route request - same thread-routing logic as /ask
-        # Register channel in DB if needed
-        channel_record = self.bot.store.get_channel(current_channel.id)
-        if not channel_record:
-            ch_name = current_channel.name
-            if not isinstance(ch_name, str):
-                ch_name = str(ch_name)
-            # Strip invalid path characters
-            ch_name = "".join(c for c in ch_name if c.isalnum() or c in ("-", "_", " "))
-            ch_name = ch_name.strip()
-            if not ch_name:
-                ch_name = f"channel-{current_channel.id}"
+        # 4. Route — open a fresh ChatGPT conversation, just like /new
+        # Register the parent channel so the manager can track it
+        if not self.bot.store.get_channel(current_channel.id):
+            ch_name = "".join(
+                c for c in current_channel.name if c.isalnum() or c in ("-", "_", " ")
+            ).strip() or f"channel-{current_channel.id}"
             self.bot.store.save_channel(current_channel.id, ch_name, "")
 
-        thread_record = self.bot.store.get_thread(current_channel.id)
-        is_first = True
-        
-        if thread_record:
-            is_first = False
-            # If already inside a thread or DM, stream directly there
-            thread = current_channel
-            channel_id = thread_record[1]
-            channel_name = self.bot.store.get_channel(channel_id)[1]
-            
-            # Start streaming the prompt response
+        if current_channel.id in self._thread_forbidden_channels:
+            # Can't create threads here — stream directly into the channel via interaction
             asyncio.create_task(self._process_message_stream(
-                thread=thread,
-                channel_id=channel_id,
-                channel_name=channel_name,
+                thread=current_channel,
+                channel_id=current_channel.id,
+                channel_name=current_channel.name,
                 user_message=compiled_prompt,
                 file_paths=[],
-                is_first_response=is_first,
+                is_first_response=True,
+                author_name=author_display_name,
                 interaction=interaction,
-                author_name=author_display_name
+                require_auth=self._is_chatgpt_logged_in()
             ))
-        else:
-            # We are in a main channel, need to spawn/use a thread
-            # Verify bot permissions before attempting to create a thread
-            perms = current_channel.permissions_for(interaction.guild.me)
-            if not perms.create_public_threads:
-                logger.warning(f"Forbidden to create thread in channel {current_channel.id}. Falling back to direct channel response.")
-                # Save mapping to point directly to main channel ID
-                self.bot.store.save_thread(current_channel.id, current_channel.id, "NEW", "Direct Channel Chat", "", 0)
-                
-                asyncio.create_task(self._process_message_stream(
-                    thread=current_channel,
-                    channel_id=current_channel.id,
-                    channel_name=current_channel.name,
-                    user_message=compiled_prompt,
-                    file_paths=[],
-                    is_first_response=is_first,
-                    interaction=interaction,
-                    author_name=author_display_name
-                ))
-                return
+            return
 
-            try:
-                # Create thread
-                thread_name = f"Read History Context"
-                thread = await current_channel.create_thread(
-                    name=thread_name,
-                    type=discord.ChannelType.public_thread,
-                    auto_archive_duration=60
+        try:
+            thread_name = f"📖 {prompt[:60]}" if prompt else "Read History"
+            thread = await current_channel.create_thread(
+                name=thread_name[:100],
+                auto_archive_duration=60,
+                type=discord.ChannelType.public_thread
+            )
+            # Show user where we are responding
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    description=f"Reading last **{msg_limit}** messages → {thread.mention}",
+                    color=0xFFFFFF
                 )
-                logger.info(f"Created new Discord thread: {thread.name} ({thread.id})")
-                
-                # Respond to parent interaction, indicating we are processing in the thread
-                embed = discord.Embed(
-                    description=f"Processing read request in thread: {thread.mention}",
-                    color=0xFFFFFF # Consistent white embed style
-                )
-                await interaction.followup.send(embed=embed)
-                
-                # Start streaming inside the new thread
-                asyncio.create_task(self._process_message_stream(
-                    thread=thread,
-                    channel_id=current_channel.id,
-                    channel_name=current_channel.name,
-                    user_message=compiled_prompt,
-                    file_paths=[],
-                    is_first_response=is_first,
-                    author_name=author_display_name
-                ))
-            except Exception as thread_err:
-                logger.error(f"Failed to create thread: {thread_err}", exc_info=True)
-                await interaction.followup.send(f"⚠️ Failed to create thread context: {thread_err}")
+            )
+            # Echo the user's prompt inside the thread so context is clear
+            await thread.send(content=f"**{author_display_name}**: {prompt}")
+
+            asyncio.create_task(self._process_message_stream(
+                thread=thread,
+                channel_id=current_channel.id,
+                channel_name=current_channel.name,
+                user_message=compiled_prompt,
+                file_paths=[],
+                is_first_response=True,
+                author_name=author_display_name,
+                require_auth=self._is_chatgpt_logged_in()
+            ))
+        except discord.Forbidden:
+            logger.warning(f"/read: Forbidden to create thread in channel {current_channel.id}. Responding directly.")
+            self._thread_forbidden_channels.add(current_channel.id)
+            asyncio.create_task(self._process_message_stream(
+                thread=current_channel,
+                channel_id=current_channel.id,
+                channel_name=current_channel.name,
+                user_message=compiled_prompt,
+                file_paths=[],
+                is_first_response=True,
+                author_name=author_display_name,
+                interaction=interaction,
+                require_auth=self._is_chatgpt_logged_in()
+            ))
+        except Exception as thread_err:
+            logger.error(f"/read: Failed to create thread: {thread_err}", exc_info=True)
+            await interaction.followup.send(f"⚠️ Failed to create read thread: `{thread_err}`")
 
     async def _process_message_stream(
         self,
