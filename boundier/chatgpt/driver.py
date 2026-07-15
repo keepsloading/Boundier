@@ -295,10 +295,11 @@ class PlaywrightDriver:
                 return False
 
             has_input = False
+            has_profile = False
             has_login = False
             
             if current_url != "about:blank":
-                # Wait for either chat input or login button to hydrate/become visible (up to 120 seconds)
+                # Wait for page elements to hydrate (polling up to 120 seconds)
                 logger.info("Waiting for page elements to hydrate (polling up to 120 seconds)...")
                 import asyncio
                 start_wait = asyncio.get_event_loop().time()
@@ -307,15 +308,23 @@ class PlaywrightDriver:
                     await self.solve_turnstile_if_present(self.page)
                     
                     chat_input = self.page.locator(self.selectors.chat_input).first
-                    login_btn = self.page.locator('[data-testid="login-button"]').first
+                    profile_btn = self.page.locator(self.selectors.profile_menu_button).first
+                    login_btn = self.page.locator('[data-testid="login-button"], button:has-text("Log in"), a:has-text("Log in"), button:has-text("Sign up")').first
                     
                     has_input = await chat_input.count() > 0
+                    has_profile = await profile_btn.count() > 0
                     has_login = await login_btn.count() > 0
                     
-                    if has_input or has_login:
+                    # We have determined state if we see profile button (logged in) or login button (logged out)
+                    if has_profile or has_login:
                         break
-                    await asyncio.sleep(2.0)
-                logger.info(f"Page elements checking complete. has_input={has_input}, has_login={has_login}")
+                        
+                    # Fallback: if we see input and 5 seconds have passed, assume safe to check
+                    if has_input and (asyncio.get_event_loop().time() - start_wait > 5.0):
+                        break
+                        
+                    await asyncio.sleep(1.0)
+                logger.info(f"Page elements checking complete. has_input={has_input}, has_profile={has_profile}, has_login={has_login}")
             
             # Log post-hydration diagnostics
             current_url = self.page.url
@@ -328,11 +337,15 @@ class PlaywrightDriver:
             except Exception:
                 pass
             
-            if has_input and not has_login:
-                logger.info("Session verified: Chat input found and login button is absent (authenticated).")
+            if has_input and has_profile:
+                logger.info("Session verified: Chat input and profile menu found (authenticated).")
                 return True
                 
-            logger.warning(f"Session unverified: chat_input_exists={has_input}, login_button_exists={has_login}")
+            if has_profile:
+                logger.info("Session verified: Profile menu found (authenticated).")
+                return True
+                
+            logger.warning(f"Session unverified: chat_input_exists={has_input}, profile_exists={has_profile}, login_button_exists={has_login}")
             try:
                 os.makedirs("logs/diagnostics", exist_ok=True)
                 await self.page.screenshot(path="logs/diagnostics/session_unverified.jpg", type="jpeg", quality=50)
