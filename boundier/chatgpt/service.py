@@ -207,6 +207,16 @@ class ChatGPTService:
                         )
                         raise TimeoutError(f"Timeout waiting for enabled send button after file upload: {e}")
                     
+                # Wait for the chat input and send button to be ready in Python to allow Next.js hydration to complete
+                try:
+                    logger.info("Waiting for page input and send button to settle in Python...")
+                    await self.page.wait_for_selector(self.selectors.chat_input, timeout=15000)
+                    await self.page.wait_for_selector('button[data-testid="send-button"], button[aria-label*="Send"]', timeout=10000)
+                    # Let the event loop rest briefly to ensure Next.js handlers are fully bound
+                    await asyncio.sleep(2.0)
+                except Exception as e:
+                    logger.warning(f"Timeout waiting for input elements to settle: {e}")
+
                 # Get a handle to the last assistant bubble before submitting to prevent history hydration race conditions
                 last_assistant_handle = await self.page.evaluate_handle(
                     "() => { const els = document.querySelectorAll('[data-message-author-role=\"assistant\"], [data-turn=\"assistant\"]'); return els.length ? els[els.length - 1] : null; }"
@@ -236,16 +246,6 @@ class ChatGPTService:
                         const submitBtn = document.querySelector('button[data-testid="send-button"], button[aria-label*="Send"]');
                         if (submitBtn && !submitBtn.disabled && submitBtn.getAttribute('aria-disabled') !== 'true') {
                             submitBtn.click();
-                            
-                            const enterEvent = new KeyboardEvent('keydown', {
-                                key: 'Enter',
-                                code: 'Enter',
-                                keyCode: 13,
-                                which: 13,
-                                bubbles: true,
-                                cancelable: true
-                            });
-                            textarea.dispatchEvent(enterEvent);
                             return true;
                         }
                         await new Promise(resolve => setTimeout(resolve, 100));
