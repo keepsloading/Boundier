@@ -163,27 +163,7 @@ class ResponseView(discord.ui.View):
                 ephemeral=True
             )
 
-    @discord.ui.button(label="Show Query", style=discord.ButtonStyle.secondary, emoji="❓", custom_id="show_query")
-    async def query_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Displays the prompt/query used for this response in an ephemeral message."""
-        await self._resolve_context(interaction)
-        
-        clean_prompt = self.prompt or ""
-        # Strip replied context prefix if present so user sees only their actual query
-        if clean_prompt.startswith("[Replied Message Context]"):
-            parts = clean_prompt.split("\n\n", 1)
-            if len(parts) > 1:
-                clean_prompt = parts[1]
-                
-        # If there was an image attachment used, append indication
-        attachment_indicator = ""
-        if self.has_image:
-            attachment_indicator = "\n\n📎 *[Image attachment included]*"
-            
-        await interaction.response.send_message(
-            content=f"### Prompt:\n{clean_prompt}{attachment_indicator}",
-            ephemeral=True
-        )
+
 
     @discord.ui.button(label="Retry Prompt", style=discord.ButtonStyle.primary, emoji="🔄", custom_id="retry_response")
     async def retry_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -681,17 +661,21 @@ class BoundierCog(commands.Cog):
         # Spawn direct channel streaming response
         guild_name = current_channel.guild.name if current_channel.guild else "Direct Message"
         logger.info(f"Slash command /ask received. Server: '{guild_name}' | Channel: '{current_channel.name}' | User: '{author_name}'")
+        
+        # Respond to the slash command with the user query first (like /new initial message)
+        await interaction.followup.send(content=f"**{author_name}**: {prompt}")
+        
         asyncio.create_task(self._process_message_stream(
-            current_channel,
-            current_channel.id,
-            current_channel.name,
-            prompt,
-            file_paths,
+            thread=current_channel,
+            channel_id=current_channel.id,
+            channel_name=current_channel.name,
+            user_message=prompt,
+            file_paths=file_paths,
             is_first_response=is_first,
             rename_parent=False,
             history_context=history_context,
             author_name=author_name,
-            interaction=interaction
+            interaction=None  # Let it send a new message and stream
         ))
 
     @app_commands.command(name="new", description="Starts a new conversation (creates a new channel or a thread in an existing channel)")
