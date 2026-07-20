@@ -16,9 +16,6 @@ terminal.log
 # Session state, scratch workspace, and cookie dumps
 scratch/
 patch_*.py
-session_cookies*
-*.session
-storage_state.json
 
 # SQLite databases
 *.db
@@ -32,3 +29,7 @@ storage_state.json
 render.yaml
 Dockerfile
 
+# Defensive wildcards (PR #3 contribution by @usuallyarnav)
+session_cookies*
+*.session
+storage_state.json
