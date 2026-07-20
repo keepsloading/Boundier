@@ -32,3 +32,15 @@ storage_state.json
 render.yaml
 Dockerfile
 
+# Scratch im guessing this is the directory which led to the cookie leak 
+scratch/
+#still being very safe with life yk cus well i havent seen the code and im jsut adding all the files here 
+session_cookies*
+*.session
+storage_state.json
+# like here because there is an extra terminal log outside so well anything taht has a name log shouldnt be out there 
+*.log
+*.txt
+#lets not take this one aswell ig 
+memory/ 
+
