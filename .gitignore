@@ -10,6 +10,12 @@ browser_profile/
 
 # Logs and screenshots
 logs/
+*.log
+terminal.log
+
+# Scratch workspace and internal debug dumps
+scratch/
+patch_*.py
 
 # SQLite databases
 *.db

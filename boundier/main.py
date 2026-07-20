@@ -62,7 +62,7 @@ async def health_check_server():
         async with server:
             await server.serve_forever()
     except Exception as e:
-        logger.error(f"Failed to start health check server: {e}")
+        logger.info(f"Health check server status (port {port}): {e}")
 
 async def async_main():
     logger = setup_logging()

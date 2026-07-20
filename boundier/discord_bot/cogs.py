@@ -244,7 +244,7 @@ class ThreadPromptView(discord.ui.View):
             return
         self.value = False
         self.stop()
-        await interaction.response.defer()
+        await interaction.response.send_message("❌ Thread migration cancelled. Your message has been ignored.", ephemeral=True)
 
 
 class BoundierCog(commands.Cog):

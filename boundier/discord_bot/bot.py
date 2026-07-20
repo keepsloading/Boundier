@@ -74,6 +74,9 @@ class BoundierBot(commands.Bot):
                                 embed.color = 0xff0000  # Red color for error/alert
                                 await message.edit(embed=embed, view=None)
                                 cleaned_count += 1
+            except (discord.NotFound, discord.Forbidden):
+                logger.debug(f"Thread {thread_id} no longer exists or is inaccessible. Cleaning stale database mapping.")
+                self.store.delete_thread(thread_id)
             except Exception as thread_err:
                 logger.warning(f"Failed to scan/cleanup thread {thread_id}: {thread_err}")
                 

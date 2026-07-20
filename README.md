@@ -38,7 +38,7 @@ The name signifies **"Breaking Boundaries"**: breaking free from API paywalls, r
 * 💾 **Native Memory & Personalization:** Inherits ChatGPT's built-in persistent memory and user profiles from your real account. No vector database, no embeddings pipeline; ChatGPT already remembers your users' preferences across sessions for free.
 * 🔒 **Configurable Access:** Limit who can use the bot to between 1 and 5 people. Set `1` if it's just for you, or up to `5` to share it with a few others. Configured during setup via the terminal wizard.
 * 🧵 **Smart Thread Routing:** Every conversation lives in its own **Discord thread**, automatically titled to match ChatGPT's auto-generated sidebar topic, keeping your server channels organized.
-* 🎛️ **Interactive Discord UI:** Responses render in **clean embeds** with action buttons to copy text, view the original prompt, retry a generation, or browse web-search citation links.
+* 🎛️ **Interactive Discord UI:** Responses render in **clean embeds** with action buttons to copy raw Markdown, retry generation, or browse web-search citation links (with user prompt echoed above).
 * ⚡ **Performance & Efficiency:** Custom JS scraping and throttled poll loops keep memory and CPU usage extremely low.
 * 📸 **Live Diagnostics:** Local diagnostics check validates the authentication status of your ChatGPT session and outputs a checklist report.
 
@@ -82,10 +82,10 @@ Here is a preview of Boundier in action, showcasing its ChatGPT Image 2 generati
 
 ## 📂 Codebase Structure
 
-* **`PlaywrightDriver` ([driver.py](file:///app/boundier/chatgpt/driver.py)):** Manages persistent Chromium contexts, injects decrypted session cookies, and handles Cloudflare Turnstile hydration checks.
-* **`ChatGPTService` ([service.py](file:///app/boundier/chatgpt/service.py)):** Performs page actions such as submitting prompts and files via JavaScript, polling generation streams, and capturing diagnostic screenshots.
-* **`SQLiteStore` ([sqlite_store.py](file:///app/boundier/storage/sqlite_store.py)):** Manages thread mappings, SQLite summaries, and user whitelist registration.
-* **`BoundierBot` ([bot.py](file:///app/boundier/discord_bot/bot.py)):** Gets the Discord bot online, sets up the slash commands (`/ask`, `/new`, `/read`), and listens for your messages.
+* **`PlaywrightDriver` ([driver.py](boundier/chatgpt/driver.py)):** Manages persistent Chromium contexts, injects decrypted session cookies, and handles Cloudflare Turnstile hydration checks.
+* **`ChatGPTService` ([service.py](boundier/chatgpt/service.py)):** Performs page actions such as submitting prompts and files via JavaScript, polling generation streams, and capturing diagnostic screenshots.
+* **`SQLiteStore` ([sqlite_store.py](boundier/storage/sqlite_store.py)):** Manages thread mappings, SQLite summaries, and user whitelist registration.
+* **`BoundierBot` ([bot.py](boundier/discord_bot/bot.py)):** Gets the Discord bot online, sets up the slash commands (`/ask`, `/new`, `/read`), and listens for your messages.
 
 ---
 
@@ -142,4 +142,4 @@ playwright:
 
 ## 💡 Naming Context
 > [!NOTE]
-> I always liked the name **Boundier** and originally named a hackathon project after it. However, that name is far more suited for this project ("Breaking Boundaries" from ChatGPT's web UI). The original hackathon repository has been renamed to **Cognitive Firewall**.
+> I always liked the name **Boundier** and originally named a hackathon project after it. However, that name is far more suited for this project ("Breaking Boundaries" from ChatGPT's web UI). The original hackathon repository has been renamed to [Nudgement](https://github.com/keepsloading/Nudgement).

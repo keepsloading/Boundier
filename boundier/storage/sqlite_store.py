@@ -76,7 +76,7 @@ class SQLiteStore:
                                     (markdown_content, row["channel_id"])
                                 )
                     else:
-                        logger.warning(f"Markdown summary exists for channel '{channel_name}', but channel is not registered in database.")
+                        logger.debug(f"Markdown summary exists for channel '{channel_name}', but channel is not registered in database.")
                         
             # 2. Update markdown files from DB (DB -> markdown)
             cursor = conn.cursor()
