@@ -13,9 +13,12 @@ logs/
 *.log
 terminal.log
 
-# Scratch workspace and internal debug dumps
+# Session state, scratch workspace, and cookie dumps
 scratch/
 patch_*.py
+session_cookies*
+*.session
+storage_state.json
 
 # SQLite databases
 *.db
