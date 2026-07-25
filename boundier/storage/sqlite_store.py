@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 import logging
 from datetime import datetime
@@ -17,6 +18,12 @@ class SQLiteStore:
         conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
         return conn
+
+    @staticmethod
+    def _safe_name(name: str) -> str:
+        """Sanitize a channel name for safe use as a filename (prevents path traversal)."""
+        cleaned = re.sub(r"[^a-zA-Z0-9_-]+", "-", name).strip("-")
+        return cleaned[:64] or "channel"
 
     def _init_db(self):
         """Initializes database schema if missing and creates memory backup folders."""
@@ -84,7 +91,7 @@ class SQLiteStore:
             for row in cursor.fetchall():
                 ch_name = row["channel_name"]
                 ch_summary = row["channel_summary"] or ""
-                file_path = os.path.join(self.memory_dir, f"{ch_name}.md")
+                file_path = os.path.join(self.memory_dir, f"{self._safe_name(ch_name)}.md")
                 
                 # Check if file needs to be updated
                 write_file = True
@@ -121,7 +128,7 @@ class SQLiteStore:
                     (channel_id, channel_name, category_id, category_name, summary)
                 )
             # Sync directly to local markdown file
-            file_path = os.path.join(self.memory_dir, f"{channel_name}.md")
+            file_path = os.path.join(self.memory_dir, f"{self._safe_name(channel_name)}.md")
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(summary)
         finally:
