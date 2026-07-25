@@ -12,10 +12,10 @@ class SQLiteStore:
         self.schema_path = schema_path
         self.memory_dir = memory_dir
         self._init_db()
-
     def _get_conn(self):
         conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
     def _init_db(self):
