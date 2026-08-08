@@ -6,6 +6,7 @@ __pycache__/
 
 # Bot environment and profile
 browser_profile/
+browser_profile_chromium/
 .chrome_profile/
 
 # Logs and screenshots
