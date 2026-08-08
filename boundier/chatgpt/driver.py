@@ -39,72 +39,54 @@ class PlaywrightDriver:
             "accept-language": "en-US,en;q=0.9"
         }
         
-        # Load persistent storage state from Gist or environment variable if present
+        # Load persistent storage state from Gist, local storage_state.json, or environment variable if present
         storage_state_str = None
         if os.environ.get("GITHUB_PAT") and os.environ.get("ENCRYPTION_KEY"):
             storage_state_str = await self._load_gist_session_state()
+
+        if not storage_state_str and os.path.exists("storage_state.json"):
+            try:
+                with open("storage_state.json", "r", encoding="utf-8") as f:
+                    storage_state_str = f.read()
+                logger.info("Sync: Loaded persistent session state from local 'storage_state.json'.")
+            except Exception as e:
+                logger.warning(f"Failed to read local storage_state.json: {e}")
             
         if not storage_state_str:
             storage_state_str = os.environ.get("CHATGPT_STORAGE_STATE")
 
         logger.info(f"Launching Chromium context. Profile dir: '{user_data_dir}', Headless: {self.config.playwright.headless}")
         
-        args=[
+        args = [
             "--disable-blink-features=AutomationControlled",
             "--no-sandbox",
-            "--start-minimized",
-            "--window-position=100,100",
-            "--disable-gpu",
-            "--disable-dev-shm-usage",
-            "--disable-extensions",
-            "--disable-background-networking",
-            "--disable-background-timer-throttling",
-            "--disable-renderer-backgrounding",
-            "--disable-software-rasterizer",
             "--no-first-run",
-            "--no-zygote",
-            "--mute-audio",
-            "--disable-3d-apis",
-            "--disable-accelerated-2d-canvas",
-            "--disable-webgl",
-            "--disable-audio-output",
-            "--renderer-process-limit=1",
-            "--disable-site-isolation-trials",
             "--disable-features=Translate,OptimizationHints,BackForwardCache,MediaRouter",
-            "--js-flags=--expose-gc --max-old-space-size=256"
+            "--disable-infobars"
         ]
 
-        if not self.config.playwright.headless:
-            try:
-                # When running locally in headed mode for authorization, attempt to use the system Chrome
-                # and ignore automation flags to bypass Google OAuth anti-bot detection.
-                logger.info("Attempting to launch system Google Chrome to bypass Google OAuth security checks...")
-                self.context = await self.playwright.chromium.launch_persistent_context(
-                    user_data_dir=user_data_dir,
-                    headless=False,
-                    viewport=viewport_dims,
-                    user_agent=user_agent,
-                    locale=locale,
-                    extra_http_headers=extra_headers,
-                    args=args,
-                    channel="chrome",
-                    ignore_default_args=["--enable-automation"]
-                )
-            except Exception as chrome_err:
-                logger.warning(f"Could not launch system Chrome ({chrome_err}). Falling back to default Playwright Chromium...")
-                self.context = await self.playwright.chromium.launch_persistent_context(
-                    user_data_dir=user_data_dir,
-                    headless=False,
-                    viewport=viewport_dims,
-                    user_agent=user_agent,
-                    locale=locale,
-                    extra_http_headers=extra_headers,
-                    args=args
-                )
-        else:
+        try:
             self.context = await self.playwright.chromium.launch_persistent_context(
                 user_data_dir=user_data_dir,
-                headless=True,
+                headless=self.config.playwright.headless,
+                viewport=viewport_dims,
+                user_agent=user_agent,
+                locale=locale,
+                extra_http_headers=extra_headers,
+                args=args
+            )
+        except Exception as launch_err:
+            logger.warning(f"Error launching Chromium with profile directory '{user_data_dir}' ({launch_err}). Resetting profile directory for Chromium compatibility...")
+            import shutil
+            if os.path.exists(user_data_dir):
+                try:
+                    shutil.rmtree(user_data_dir, ignore_errors=True)
+                except Exception as rmtree_err:
+                    logger.warning(f"Failed to clear profile directory: {rmtree_err}")
+            
+            self.context = await self.playwright.chromium.launch_persistent_context(
+                user_data_dir=user_data_dir,
+                headless=self.config.playwright.headless,
                 viewport=viewport_dims,
                 user_agent=user_agent,
                 locale=locale,
@@ -114,12 +96,11 @@ class PlaywrightDriver:
         
         self.context.set_default_timeout(self.config.playwright.timeout_ms)
         
-        # Block non-essential heavy resources to optimize CPU/Memory and speed up loads
+        # Block only telemetry/ad tracking endpoints to save bandwidth without affecting UI rendering speed
         async def route_intercept(route):
             req = route.request
             url_lower = req.url.lower()
             
-            # Telemetry/ad domains to block to save CPU and memory on Render
             blocked_patterns = [
                 "sentry.io",
                 "datadoghq",
@@ -140,36 +121,26 @@ class PlaywrightDriver:
                     return
                 except Exception:
                     pass
-            
-            if req.resource_type in ("font", "media"):
-                try:
-                    await route.abort()
-                except Exception:
-                    pass
-            elif req.resource_type == "image":
-                # Only allow generated images and downloadable files to load, block external decorative UI images
-                if "oaiusercontent" in url_lower or "/files/" in url_lower:
-                    try:
-                        await route.continue_()
-                    except Exception:
-                        pass
-                else:
-                    try:
-                        await route.abort()
-                    except Exception:
-                        pass
-            else:
-                try:
-                    await route.continue_()
-                except Exception:
-                    pass
+
+            try:
+                await route.continue_()
+            except Exception:
+                pass
 
         await self.context.route("**/*", route_intercept)
         
-        # Add init script to remove webdriver trace and spoof Win32 platform matching user_agent
+        # Add init script to remove webdriver trace and spoof Win32 platform and plugins for Cloudflare Turnstile stealth
         init_script = """
-        delete Object.getPrototypeOf(navigator).webdriver;
-        Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+        const newProto = Object.getPrototypeOf(navigator);
+        try { delete newProto.webdriver; } catch(e) {}
+        try { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); } catch(e) {}
+        try { Object.defineProperty(navigator, 'platform', { get: () => 'Win32' }); } catch(e) {}
+        try { Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] }); } catch(e) {}
+        try { Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] }); } catch(e) {}
+        try { Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 1 }); } catch(e) {}
+        if (!window.chrome) {
+            window.chrome = { runtime: {} };
+        }
         """
         await self.context.add_init_script(init_script)
         
@@ -324,7 +295,14 @@ class PlaywrightDriver:
 
     async def solve_turnstile_if_present(self, page: Page) -> bool:
         """Detects and clicks Cloudflare Turnstile checkbox if present on the page."""
-        if getattr(page, "_turnstile_solved_count", 0) >= 10:
+        # Rate-limit auto-click attempts to avoid spamming Cloudflare and invalidating human verification
+        now = asyncio.get_event_loop().time()
+        last_attempt = getattr(page, "_last_turnstile_attempt", 0.0)
+        if now - last_attempt < 5.0:
+            return False
+        page._last_turnstile_attempt = now
+
+        if getattr(page, "_turnstile_solved_count", 0) >= 5:
             return False
             
         try:
@@ -337,10 +315,10 @@ class PlaywrightDriver:
                     if await checkbox.count() > 0 and await checkbox.is_visible():
                         await checkbox.click(force=True)
                         page._turnstile_solved_count = getattr(page, "_turnstile_solved_count", 0) + 1
-                        logger.info(f"[SUCCESS] Clicked Cloudflare Turnstile checkbox! ({page._turnstile_solved_count}/10)")
+                        logger.info(f"[SUCCESS] Clicked Cloudflare Turnstile checkbox! ({page._turnstile_solved_count}/5)")
                         return True
                         
-                    # Fallback: Click center-left of the iframe from parent page context
+                    # Fallback: Click center-left of the iframe with human mouse movement
                     iframe_selectors = [
                         'iframe[src*="challenges.cloudflare.com"]',
                         'iframe[src*="cloudflare"]',
@@ -351,12 +329,12 @@ class PlaywrightDriver:
                         if await loc.count() > 0 and await loc.is_visible():
                             box = await loc.bounding_box()
                             if box:
-                                # Standard Turnstile checkbox sits on the left side of the 300x65 widget
                                 click_x = box["x"] + min(40, box["width"] / 2)
                                 click_y = box["y"] + (box["height"] / 2)
+                                await page.mouse.move(click_x, click_y, steps=5)
                                 await page.mouse.click(click_x, click_y)
                                 page._turnstile_solved_count = getattr(page, "_turnstile_solved_count", 0) + 1
-                                logger.info(f"[SUCCESS] Clicked center-left coordinates of Turnstile iframe bounding box! ({page._turnstile_solved_count}/10)")
+                                logger.info(f"[SUCCESS] Clicked Turnstile bounding box! ({page._turnstile_solved_count}/5)")
                                 return True
             return False
         except Exception as e:
@@ -380,7 +358,9 @@ class PlaywrightDriver:
             page_title = await self.page.title()
             logger.info(f"Session check diagnostics - URL: {current_url} | Title: {page_title}")
             
-            if "auth" in current_url or "login" in current_url:
+            # If on an authentication URL or redirect page, user is NOT logged in
+            auth_keywords = ["auth", "login", "callback", "google", "apple", "microsoft", "auth0"]
+            if any(kw in current_url.lower() for kw in auth_keywords) and "chatgpt.com/" not in current_url:
                 logger.warning(f"Session unverified: Redirected to landing page/login URL: {current_url}")
                 return False
 
@@ -399,18 +379,18 @@ class PlaywrightDriver:
                     
                     chat_input = self.page.locator(self.selectors.chat_input).first
                     profile_btn = self.page.locator(self.selectors.profile_menu_button).first
-                    login_btn = self.page.locator('[data-testid="login-button"], button:has-text("Log in"), a:has-text("Log in"), button:has-text("Sign up")').first
+                    login_btn = self.page.locator('[data-testid="login-button"], [data-testid="signup-button"], [data-testid="welcome-login-button"], button:has-text("Log in"), a:has-text("Log in"), button:has-text("Sign up"), a:has-text("Sign up"), a[href*="auth/login"], a[href*="login"]').first
                     
-                    has_input = await chat_input.count() > 0
-                    has_profile = await profile_btn.count() > 0
-                    has_login = await login_btn.count() > 0
+                    has_input = (await chat_input.count() > 0) and (await chat_input.is_visible())
+                    has_profile = (await profile_btn.count() > 0) and (await profile_btn.is_visible())
+                    has_login = (await login_btn.count() > 0) and (await login_btn.is_visible())
                     
-                    # We have determined state if we see profile button (logged in) or login button (logged out)
-                    if has_profile or has_login:
+                    # We have determined state if we see login button (definitely logged out)
+                    if has_login:
                         break
                         
-                    # Fallback: if we see input and 5 seconds have passed, assume safe to check
-                    if has_input and (asyncio.get_event_loop().time() - start_wait > 5.0):
+                    # Or if we see profile button and login button is absent (definitely logged in)
+                    if has_profile and not has_login:
                         break
                         
                     await asyncio.sleep(1.0)
@@ -427,12 +407,15 @@ class PlaywrightDriver:
             except Exception:
                 pass
             
-            if has_input and has_profile:
-                logger.info("Session verified: Chat input and profile menu found (authenticated).")
-                return True
+            # If a login/signup button is visible, the user is NOT authenticated
+            if has_login:
+                logger.warning("Session unverified: Login/Signup button is visible (user is logged out).")
+                return False
                 
-            if has_profile:
-                logger.info("Session verified: Profile menu found (authenticated).")
+            # Authentication requires user profile button AND absence of login buttons
+            # (Note: has_input is NOT used as indicator because guest users also see chat input)
+            if has_profile and not has_login:
+                logger.info("Session verified: User is authenticated (profile button found, login button absent).")
                 return True
                 
             logger.warning(f"Session unverified: chat_input_exists={has_input}, profile_exists={has_profile}, login_button_exists={has_login}")
@@ -458,11 +441,19 @@ class PlaywrightDriver:
         
         elapsed = 0
         poll_interval = 2
+        consecutive_successes = 0
+        
         while elapsed < timeout_seconds:
             # Crucial: Do NOT navigate/reload during polling to avoid interrupting the user's login typing!
-            if await self.check_session_active(navigate=False):
-                logger.info("Manual login verified! Resuming execution.")
-                return True
+            is_active = await self.check_session_active(navigate=False)
+            if is_active:
+                consecutive_successes += 1
+                if consecutive_successes >= 2:
+                    logger.info("Manual login verified (consecutive checks passed)! Resuming execution.")
+                    return True
+            else:
+                consecutive_successes = 0
+                
             await asyncio.sleep(poll_interval)
             elapsed += poll_interval
             
@@ -529,8 +520,8 @@ class PlaywrightDriver:
         
         if authenticated:
             logger.info("Authentication successful!")
-            # Save storage state on successful login
-            await self.save_gist_session_state()
+            # Save storage state locally and to Gist on successful login
+            await self.save_session_state()
             # If we temporarily switched to headed mode, restart in the user's configured mode
             if was_headless:
                 logger.info("Re-applying headless mode config and restarting browser driver...")
@@ -616,6 +607,24 @@ class PlaywrightDriver:
         except Exception as e:
             logger.warning(f"Sync: Failed to load persistent session from Gist: {e}")
             return None
+
+    async def save_session_state(self):
+        """Saves current browser storage state locally to 'storage_state.json' and syncs to Gist if configured."""
+        if not self.context:
+            return
+
+        try:
+            import json
+            state = await self.context.storage_state()
+            state_str = json.dumps(state, indent=2)
+            with open("storage_state.json", "w", encoding="utf-8") as f:
+                f.write(state_str)
+            logger.info("Sync: Saved persistent session state to local 'storage_state.json'.")
+        except Exception as e:
+            logger.warning(f"Failed to save local storage_state.json: {e}")
+
+        # Also trigger Gist sync if GITHUB_PAT is set
+        await self.save_gist_session_state()
 
     async def save_gist_session_state(self):
         """Encrypts and pushes the current browser storage state to a private GitHub Gist."""
