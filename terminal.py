@@ -192,12 +192,8 @@ async def run_headed_login():
         
         if authenticated:
             print("\n[SUCCESS] Login verified successfully!")
-            # Trigger manual sync to Gist only if credentials are set
-            if os.environ.get("GITHUB_PAT") or load_env_defaults().get("GITHUB_PAT"):
-                await driver.save_gist_session_state()
-                print("[SUCCESS] Session cookies exported locally and synced to Gist backup.")
-            else:
-                print("[SUCCESS] Session cookies exported locally.")
+            await driver.save_session_state()
+            print("[SUCCESS] Session cookies saved locally to 'storage_state.json' and synced to backup.")
         else:
             print("\n[ERROR] Login wait period timed out or failed.")
             
