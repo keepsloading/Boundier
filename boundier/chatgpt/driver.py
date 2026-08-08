@@ -33,7 +33,6 @@ class PlaywrightDriver:
             "height": self.config.playwright.viewport.height
         }
         
-        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         locale = "en-US"
         extra_headers = {
             "accept-language": "en-US,en;q=0.9"
@@ -70,7 +69,6 @@ class PlaywrightDriver:
                 user_data_dir=user_data_dir,
                 headless=self.config.playwright.headless,
                 viewport=viewport_dims,
-                user_agent=user_agent,
                 locale=locale,
                 extra_http_headers=extra_headers,
                 args=args
@@ -88,7 +86,6 @@ class PlaywrightDriver:
                 user_data_dir=user_data_dir,
                 headless=self.config.playwright.headless,
                 viewport=viewport_dims,
-                user_agent=user_agent,
                 locale=locale,
                 extra_http_headers=extra_headers,
                 args=args
